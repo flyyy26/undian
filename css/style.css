@@ -82,14 +82,14 @@
 }
 #participantsTable table thead tr th{
     border: .1vw solid #F45139;
-    padding: .85vw 5vw;
+    padding: .85vw 1vw;
     color: white;
     font-weight: 500;
     font-size: 1.2vw;
 }
 #participantsTable table tbody tr td{
     border: .1vw solid #F45139;
-    padding: .85vw 5vw;
+    padding: .85vw 1vw;
     color: #1A156E;
     font-weight: 400;
     font-size: 1.2vw;
@@ -322,7 +322,7 @@ canvas{
     position: absolute;
     left: 50%;
     top: 50%;
-    transform: translate(-50%, 450%);
+    transform: translate(-50%, 300%);
     background: linear-gradient(193.36deg, #F45139 -24.42%, #814C65 58.52%, #1A156E 126.38%);
     border-radius: 1.6vw;
     border: .24vw solid #F45139;
@@ -370,6 +370,9 @@ canvas{
     /* box-shadow: 0px 2px 0px 0px #020034; */
     text-shadow: 0px .2vw #27186B;
     -webkit-text-stroke: .1vw #27186B;
+}
+.popup_winner_content span{
+    font-size: 1.7vw;
 }
 .throphy_img{
     position: absolute;
@@ -446,6 +449,7 @@ canvas{
     border: none;
     font-size: 1vw;
     padding: .74vw 0;
+    width:100%;
 }
 .box_login button{
     margin: auto;

@@ -54,7 +54,7 @@ if ($id_user === null) {
 }
 
 // Fetch participants from the database
-$participantsQuery = "SELECT npk, nama, category_id FROM participants WHERE id_user = $id_user";
+$participantsQuery = "SELECT npk, nama, category_id, unit_kerja FROM participants WHERE id_user = $id_user";
 $participantsResult = $conn->query($participantsQuery);
 
 if ($participantsResult === false) {
@@ -67,6 +67,7 @@ while ($row = $participantsResult->fetch_assoc()) {
     $participantsArray[] = [
         'npk' => $row['npk'],
         'nama' => $row['nama'],
+        'unit_kerja' => $row['unit_kerja'],
         'category_id' => $row['category_id']
     ];
 }
@@ -154,13 +155,15 @@ $conn->close();
                         <tr>
                             <th class="border border-gray-400 px-4 py-2">NPK</th>
                             <th class="border border-gray-400 px-4 py-2">Nama</th>
+                            <th class="border border-gray-400 px-4 py-2">Unit Kerja</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($participantsArray as $participant): ?>
                         <tr>
-                            <td class="border border-gray-400 px-4 py-2"><?php echo $participant['npk']; ?></td>
-                            <td class="border border-gray-400 px-4 py-2"><?php echo $participant['nama']; ?></td>
+                            <td style="text-align:center;"><?php echo $participant['npk']; ?></td>
+                            <td ><?php echo $participant['nama']; ?></td>
+                            <td ><?php echo $participant['unit_kerja']; ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -172,7 +175,7 @@ $conn->close();
                 <p class="winner_name winner_name_results">Pemenang: <br/>Bachtiar Yusuf Nasruddin Amanullah <br/> NPK: 4244778</p>
              </div> -->
             
-            <?php if (count($categoriesArray) > 1): ?>
+            <?php if (count($categoriesArray) > 0): ?>
                 <h4 class="jumlah_peserta"><?php echo $totalParticipants; ?> PESERTA TERDAFTAR</h4>
             <?php endif; ?>
 
@@ -195,12 +198,18 @@ $conn->close();
             </div>
 
             <div class="btn_action_draw">
-                <button id="refreshButton" class="fullscreen_btn">
+                <a href="dashboard.php">
+                    <button class="fullscreen_btn" title="Dashboard">
+                        <img src="images/dashboard_icon.svg" alt="">
+                    </button>
+                </a>
+                <button id="refreshButton" class="fullscreen_btn" title="Muat Ulang">
                     <img src="images/refresh_icon.svg" alt="">
                 </button>
-                <button onclick="toggleFullscreen()" id="fullscreenButton" class="fullscreen_btn">
+                <button onclick="toggleFullscreen()" id="fullscreenButton" class="fullscreen_btn" title="Fullscreen">
                     <img src="images/fullscreen_icon.svg" alt="">
                 </button>
+
             </div>
         </div>
     </div>
@@ -275,10 +284,10 @@ $conn->close();
             const winner = participants[winnerIndex];
 
             // Tampilkan nama pemenang di modal popup
-            showWinner(winner.nama, winner.npk);
+            showWinner(winner.nama, winner.npk, winner.unit_kerja);
 
             // Tampilkan pemenang di elemen winnerContainer
-            document.getElementById("winner").innerHTML = `<p class="winner_name winner_name_results">FUNtastEAST Indonesia</p>`;
+            document.getElementById("winner").innerHTML = `<p class="winner_name winner_name_results">FUNtastEAST Indonesia 2024</p>`;
 
             // Hapus peserta pemenang dari daftar
             participants.splice(winnerIndex, 1);
@@ -288,9 +297,10 @@ $conn->close();
             document.getElementById("stopButton").classList.add("opacity");
 
             // Panggil fungsi untuk menyimpan pemenang ke database
-            saveWinnerToDatabase(winner.npk, winner.nama, selectedCategoryId);
-
+            saveWinnerToDatabase(winner.npk, winner.nama, selectedCategoryId, winner.unit_kerja);
         }
+
+
 
 
         function fetchParticipants(categoryId) {
@@ -307,8 +317,9 @@ $conn->close();
                     participants.forEach(participant => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                            <td>${participant.npk}</td>
+                            <td style="text-align:center;">${participant.npk}</td>
                             <td>${participant.nama}</td>
+                            <td>${participant.unit_kerja || 'N/A'}</td>
                         `;
                         participantsTableBody.appendChild(row);
                     });
@@ -317,15 +328,21 @@ $conn->close();
             xhr.send();
         }
 
+
         // Function to show the modal
-        function showWinner(winnerName, winnerNPK) {
-            document.getElementById("winnerName").innerHTML = `<p>${winnerName}</p>  <p>NPK: ${winnerNPK}</p>`; // Set winner name dan NPK
+        function showWinner(winnerName, winnerNPK, unitKerja) {
+            document.getElementById("winnerName").innerHTML = `
+                <p>${winnerName}</p>  
+                <p>NPK: ${winnerNPK}</p>
+                <p>Unit Kerja: <br/><span>${unitKerja || 'N/A'}</span></p>
+            `; // Set winner name, NPK, dan unit kerja
             document.getElementById("winnerModal").classList.add("active_winner");
 
             setTimeout(() => {
                 startConfetti();
             }, 500);
         }
+
 
 
         // Function to close the modal
@@ -382,8 +399,8 @@ $conn->close();
             fetchParticipants(selectedCategoryId);
         });
 
-        function saveWinnerToDatabase(npk, nama, categoryId) {
-            console.log(`Saving winner: npk=${npk}, nama=${nama}, categoryId=${categoryId}, idUser=${idUser}`);
+        function saveWinnerToDatabase(npk, nama, categoryId, unitKerja) {
+            console.log(`Saving winner: npk=${npk}, nama=${nama}, categoryId=${categoryId}, unitKerja=${unitKerja}, idUser=${idUser}`);
             
             const xhr = new XMLHttpRequest();
             xhr.open("POST", "save_winner.php", true);
@@ -398,8 +415,10 @@ $conn->close();
                 }
             };
 
-            xhr.send(`npk=${encodeURIComponent(npk)}&nama=${encodeURIComponent(nama)}&category_id=${encodeURIComponent(categoryId)}&id_user=${encodeURIComponent(idUser)}`);
+            // Kirim data ke server termasuk unit_kerja
+            xhr.send(`npk=${encodeURIComponent(npk)}&nama=${encodeURIComponent(nama)}&category_id=${encodeURIComponent(categoryId)}&unit_kerja=${encodeURIComponent(unitKerja)}&id_user=${encodeURIComponent(idUser)}`);
         }
+
 
 
 

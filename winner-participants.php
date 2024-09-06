@@ -23,23 +23,52 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-
 // Handle delete action
 if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);
+    
+    // Get the npk of the winner to be deleted
+    $npkQuery = "SELECT npk FROM winner WHERE id = $id AND id_user = $user_id";
+    $npkResult = $conn->query($npkQuery);
+    $npk = null;
+    if ($npkResult->num_rows > 0) {
+        $npkRow = $npkResult->fetch_assoc();
+        $npk = $npkRow['npk'];
+    }
+
+    // Delete the winner
     $conn->query("DELETE FROM winner WHERE id = $id AND id_user = $user_id");
+    
+    // Update participants table if npk is found
+    if ($npk) {
+        $conn->query("UPDATE participants SET is_winner = 0 WHERE npk = '$npk'");
+    }
+
     header("Location: winner-participants.php");
     exit();
 }
 
 // Handle delete all action
 if (isset($_GET['delete_all'])) {
+    // Get all npk values for winners to be deleted
+    $npkQuery = "SELECT npk FROM winner WHERE id_user = $user_id";
+    $npkResult = $conn->query($npkQuery);
+    
+    // Delete all winners
     $conn->query("DELETE FROM winner WHERE id_user = $user_id");
+    
+    // Update participants table
+    while ($npkRow = $npkResult->fetch_assoc()) {
+        $npk = $npkRow['npk'];
+        $conn->query("UPDATE participants SET is_winner = 0 WHERE npk = '$npk'");
+    }
+
     header("Location: winner-participants.php");
     exit();
 }
 
-$winnerQuery = "SELECT w.id, w.npk, w.nama, c.name AS category_name 
+// Query to fetch winners
+$winnerQuery = "SELECT w.id, w.npk, w.nama, w.unit_kerja, c.name AS category_name 
                 FROM winner w
                 JOIN categories c ON w.category_id = c.id
                 WHERE w.id_user = $user_id";
@@ -78,7 +107,6 @@ if ($result->num_rows > 0) {
 }
 
 $stmt->close();
-
 $conn->close();
 ?>
 
@@ -192,6 +220,7 @@ $conn->close();
                     <th class="py-2 px-4 border-b">#</th>
                     <th class="py-2 px-4 border-b">NPK</th>
                     <th class="py-2 px-4 border-b">Nama Pemenang</th>
+                    <th class="py-2 px-4 border-b">Unit Kerja</th>
                     <th class="py-2 px-4 border-b">Kategori</th>
                     <th class="py-2 px-4 border-b">Actions</th>
                 </tr>
@@ -204,6 +233,7 @@ $conn->close();
                         <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($counter++); ?></td> <!-- Display the counter value -->
                         <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($row['npk']); ?></td>
                         <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($row['nama']); ?></td>
+                        <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($row['unit_kerja']); ?></td>
                         <td class="py-2 px-4 border-b text-center"><?php echo htmlspecialchars($row['category_name']); ?></td>
                         <td class="py-2 px-4 border-b text-center">
                             <a href="winner-participants.php?delete=<?php echo htmlspecialchars($row['id']); ?>" class="text-red-500 ml-4" onclick="return confirm('Are you sure you want to delete this user?')">Delete</a>

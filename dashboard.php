@@ -165,7 +165,7 @@ $conn->close();
             <div class="flex justify-between">
                 <div class="flex gap-2">
                     <a href="index.php" target="blank_"><button class="bg-green-400 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Mulai Undian <iconify-icon icon="mdi:rocket"></iconify-icon></button></a>
-                    <button onclick="openAddPopup()" class="bg-blue-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Add Participant <iconify-icon icon="octicon:plus-16"></iconify-icon></button>
+                    <button onclick="openAddPopup()" class="bg-blue-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Tambah Peserta <iconify-icon icon="octicon:plus-16"></iconify-icon></button>
                     <button onclick="openAddFilePopup()" class="bg-blue-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Upload XLSX <iconify-icon icon="octicon:plus-16"></iconify-icon></button>
                     <a href="winner-participants.php"><button class="bg-yellow-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Lihat Pemenang <iconify-icon icon="ion:trophy"></iconify-icon></button></a>
                 </div>
@@ -189,7 +189,7 @@ $conn->close();
                         </div>
                     </div>
                     <button onclick="openCreateCategoryPopup()" class="bg-green-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Buat Kategori <iconify-icon icon="octicon:plus-16"></iconify-icon></button>
-                    <button onclick="confirmDeleteAll()" class="bg-red-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Delete All Participants <iconify-icon icon="ion:trash"></iconify-icon></button>
+                    <button onclick="confirmDeleteAll()" class="bg-red-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Hapus semua peserta <iconify-icon icon="ion:trash"></iconify-icon></button>
                     <!-- Button to trigger logout -->
                     <form action="logout.php" method="post" style="display: inline;">
                         <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-md  flex items-center gap-1">Logout <iconify-icon icon="ri:logout-circle-r-fill"></iconify-icon></button>
@@ -204,6 +204,7 @@ $conn->close();
                     <th class="py-2 px-4 border-b">#</th>
                     <th class="py-2 px-4 border-b">NPK</th>
                     <th class="py-2 px-4 border-b">Nama Peserta</th>
+                    <th class="py-2 px-4 border-b">Unit Kerja</th>
                     <th class="py-2 px-4 border-b">Aksi</th>
                 </tr>
             </thead>
@@ -212,12 +213,13 @@ $conn->close();
                 $counter = 1; // Initialize the counter variable
                 while ($row = $participantsResult->fetch_assoc()): ?>
                     <tr>
-                        <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($counter++); ?></td> <!-- Display the counter value -->
-                        <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($row['npk']); ?></td>
+                        <td class="py-2 px-4 border-b text-center"><?php echo htmlspecialchars($counter++); ?></td> <!-- Display the counter value -->
+                        <td class="py-2 px-4 border-b text-center"><?php echo htmlspecialchars($row['npk']); ?></td>
                         <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($row['nama']); ?></td>
+                        <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($row['unit_kerja']); ?></td>
                         <td class="py-2 px-4 border-b flex justify-center">
                             <button onclick="openEditPopup(<?php echo htmlspecialchars($row['id']); ?>, '<?php echo htmlspecialchars($row['nama']); ?>')" class="text-blue-500">Edit</button>
-                            <a href="dashboard.php?delete=<?php echo htmlspecialchars($row['id']); ?>" class="text-red-500 ml-4" onclick="return confirm('Are you sure you want to delete this user?')">Delete</a>
+                            <a href="dashboard.php?delete=<?php echo htmlspecialchars($row['id']); ?>" class="text-red-500 ml-4" onclick="return confirm('Are you sure you want to delete this user?')">Hapus</a>
                         </td>
                     </tr>
                 <?php endwhile; ?>
@@ -268,7 +270,10 @@ $conn->close();
                 <input type="text" name="npks[]" id="npk" required class="w-full border border-gray-300 p-2 mb-2" placeholder="NPK">
                 
                 <label for="name">Name:</label>
-                <input type="text" name="names[]" id="name" required class="w-full border border-gray-300 p-2 mb-4" placeholder="Name">
+                <input type="text" name="names[]" id="name" required class="w-full border border-gray-300 p-2 mb-4" placeholder="Nama">
+
+                <label for="unit_kerja">Unit Kerja:</label>
+                <input type="text" name="unit_kerja[]" id="unit_kerja" required class="w-full border border-gray-300 p-2 mb-4" placeholder="Unit Kerja">
 
                 <label for="fileCategory">Category:</label>
                 <select name="category_id" id="fileCategory" required class="w-full border border-gray-300 p-2 mb-4">
