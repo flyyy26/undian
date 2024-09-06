@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $conn->query("UPDATE participants SET nama = '$name' WHERE id = $id");
 
-    header("Location: manage-users.php");
+    header("Location: dashboard.php");
     exit();
 }
 

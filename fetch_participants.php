@@ -1,8 +1,10 @@
 <?php
+session_start(); // Pastikan sesi dimulai
+
 // Database connection parameters
 $servername = "localhost";
-$username = "root"; // Change to your database username
-$password = ""; // Change to your database password
+$username = "root"; // Ganti dengan username database Anda
+$password = ""; // Ganti dengan password database Anda
 $dbname = "lucky_draw";
 
 // Create a connection to the database
@@ -13,18 +15,23 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-$category_id = isset($_GET['category_id']) ? intval($_GET['category_id']) : 0;
+// Ambil id_user dari sesi
+$id_user = $_SESSION['user_id'];
 
-$sql = "SELECT npk, nama FROM participants";
-if ($category_id > 0) {
-    $sql .= " WHERE category_id = $category_id";
+// Ambil kategori berdasarkan id_user
+$category_id = isset($_GET['category_id']) ? intval($_GET['category_id']) : null;
+$query = "SELECT npk, nama FROM participants WHERE id_user = $id_user";
+
+if ($category_id !== null && $category_id != 'all') {
+    $query .= " AND category_id = $category_id";
 }
 
-$result = $conn->query($sql);
+$participantsResult = $conn->query($query);
 
-$participants = [];
-while ($row = $result->fetch_assoc()) {
-    $participants[] = [
+$participantsArray = [];
+
+while ($row = $participantsResult->fetch_assoc()) {
+    $participantsArray[] = [
         'npk' => $row['npk'],
         'nama' => $row['nama']
     ];
@@ -32,6 +39,7 @@ while ($row = $result->fetch_assoc()) {
 
 $conn->close();
 
+// Output as JSON
 header('Content-Type: application/json');
-echo json_encode($participants);
+echo json_encode($participantsArray);
 ?>

@@ -13,13 +13,14 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Get names, npks, and category_id from POST request
+// Get names, npks, category_id, and id_user from POST request
 $names = $_POST['names'];
 $npks = $_POST['npks'];
 $category_id = intval($_POST['category_id']); // Convert to integer for security
+$id_user = intval($_POST['id_user']); // Convert to integer for security
 
 // Prepare an SQL statement to insert each participant
-$stmt = $conn->prepare("INSERT INTO participants (npk, nama, category_id) VALUES (?, ?, ?)");
+$stmt = $conn->prepare("INSERT INTO participants (npk, nama, category_id, id_user) VALUES (?, ?, ?, ?)");
 
 // Check if the statement was prepared successfully
 if (!$stmt) {
@@ -32,7 +33,7 @@ for ($i = 0; $i < count($names); $i++) {
 
     if (!empty($name) && !empty($npk)) {
         // Bind parameters to the SQL query
-        $stmt->bind_param("ssi", $npk, $name, $category_id);
+        $stmt->bind_param("ssii", $npk, $name, $category_id, $id_user);
         
         // Execute the statement
         if (!$stmt->execute()) {
@@ -47,6 +48,6 @@ $stmt->close();
 $conn->close();
 
 // Redirect to a success page or back to the input form
-header("Location: manage-users.php?success=1");
+header("Location: dashboard.php?success=1");
 exit();
 ?>

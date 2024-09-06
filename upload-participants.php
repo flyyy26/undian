@@ -17,16 +17,18 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Check if a file was uploaded
-if (isset($_FILES['file']) && $_FILES['file']['error'] == 0) {
+// Check if a file was uploaded, a category_id was submitted, and id_user was provided
+if (isset($_FILES['file']) && $_FILES['file']['error'] == 0 && isset($_POST['category_id']) && isset($_POST['id_user'])) {
     $fileTmpPath = $_FILES['file']['tmp_name'];
+    $category_id = $_POST['category_id']; // Get category_id from form
+    $id_user = $_POST['id_user']; // Get id_user from form
 
     // Load the uploaded Excel file
     $spreadsheet = IOFactory::load($fileTmpPath);
     $worksheet = $spreadsheet->getActiveSheet();
 
-    // Prepare an SQL statement to insert each participant
-    $stmt = $conn->prepare("INSERT INTO participants (npk, nama) VALUES (?, ?)");
+    // Prepare an SQL statement to insert each participant, including category_id and id_user
+    $stmt = $conn->prepare("INSERT INTO participants (npk, nama, category_id, id_user) VALUES (?, ?, ?, ?)");
 
     // Iterate through the rows in the worksheet, starting from the second row
     $rowIterator = $worksheet->getRowIterator(2); // Start from row 2
@@ -46,7 +48,7 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] == 0) {
 
         // Check if NPK and Name are not empty
         if (!empty($npk) && !empty($nama)) {
-            $stmt->bind_param("ss", $npk, $nama);
+            $stmt->bind_param("ssii", $npk, $nama, $category_id, $id_user); // "s" for string, "i" for integer
             $stmt->execute();
         }
     }
@@ -56,8 +58,8 @@ if (isset($_FILES['file']) && $_FILES['file']['error'] == 0) {
     $conn->close();
 
     // Redirect to manage-users.php with success message
-    header("Location: manage-users.php?success=1");
+    header("Location: dashboard.php?success=1");
     exit();
 } else {
-    echo "Error: " . $_FILES['file']['error'];
+    echo "Error: File, category, or user ID was not uploaded correctly.";
 }

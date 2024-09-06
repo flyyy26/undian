@@ -1,4 +1,5 @@
 <?php
+session_start();
 // Database connection parameters
 $servername = "localhost";
 $username = "root"; // Change to your database username
@@ -13,39 +14,48 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+// Pastikan pengguna sudah login, jika tidak redirect ke login
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit();
+}
+
+// Ambil user_id dari session
+$user_id = $_SESSION['user_id'];
+
 $category_id = isset($_GET['category_id']) ? intval($_GET['category_id']) : 0;
 
 // Handle delete action
 if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);
-    $conn->query("DELETE FROM participants WHERE id = $id");
-    header("Location: manage-users.php");
+    $conn->query("DELETE FROM participants WHERE id = $id AND id_user = $user_id");
+    header("Location: dashboard.php");
     exit();
 }
 
 // Handle delete all action
 if (isset($_GET['delete_all'])) {
-    $conn->query("DELETE FROM participants");
-    header("Location: manage-users.php");
+    $conn->query("DELETE FROM participants WHERE id_user = $user_id");
+    header("Location: dashboard.php");
     exit();
 }
 
-$participantsQuery = "SELECT * FROM participants";
+$participantsQuery = "SELECT * FROM participants WHERE id_user = $user_id";
 if ($category_id) {
-    $participantsQuery .= " WHERE category_id = $category_id";
+    $participantsQuery .= " AND category_id = $category_id";
 }
 $participantsResult = $conn->query($participantsQuery);
 
 // Fetch categories from the database
-$categoriesResult = $conn->query("SELECT * FROM categories");
-// Fetch categories from the database
-$categoriesResult1 = $conn->query("SELECT * FROM categories");
-$categoriesResult2 = $conn->query("SELECT * FROM categories");
+$categoriesQuery = "SELECT * FROM categories WHERE id_user = $user_id";
+$categoriesResult = $conn->query($categoriesQuery);
+// Ambil kategori dari database berdasarkan id_user
+$categoriesResult1 = $conn->query("SELECT * FROM categories WHERE id_user = $user_id");
+$categoriesResult2 = $conn->query("SELECT * FROM categories WHERE id_user = $user_id");
 
+// Get the category name for the selected category if applicable
 $selectedCategoryName = 'Pilih Kategori';
-
 if ($category_id) {
-    // Get the category name for the selected category
     $categoryQuery = $conn->query("SELECT name FROM categories WHERE id = $category_id");
     if ($categoryRow = $categoryQuery->fetch_assoc()) {
         $selectedCategoryName = htmlspecialchars($categoryRow['name']);
@@ -53,6 +63,21 @@ if ($category_id) {
 }
 
 $hasCategories = $categoriesResult->num_rows > 0;
+
+$sql = "SELECT username FROM users WHERE id_user = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows > 0) {
+    $row = $result->fetch_assoc();
+    $username = htmlspecialchars($row['username']);
+} else {
+    $username = "Tidak ditemukan";
+}
+
+$stmt->close();
 
 $conn->close();
 ?>
@@ -63,10 +88,14 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Users</title>
+    <title>Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
+        *{
+            font-family: "Rubik", sans-serif;
+        }
         /* Basic styling for the popup */
         .popup {
             display: none; /* Hide the popup by default */
@@ -120,39 +149,62 @@ $conn->close();
             background-color: #3e8e41;
         }
     </style>
+    <script>
+        // Cetak user_id di console.log
+        var userId = <?php echo json_encode($user_id); ?>;
+        console.log('User ID:', userId);
+    </script>
 </head>
 <body class="bg-gray-100">
-    <div class="container mx-auto p-8">
-        <h1 class="text-2xl font-bold mb-4">Manage Users</h1>
-        <button onclick="openAddPopup()" class="bg-blue-500 text-white px-4 py-2 rounded-md mb-4">Add Participant</button>
-        <button onclick="openAddFilePopup()" class="bg-blue-500 text-white px-4 py-2 rounded-md mb-4">Upload XLSX</button>
-        <button onclick="confirmDeleteAll()" class="bg-red-500 text-white px-4 py-2 rounded-md mb-4">Delete All Participants</button>
-        <div class="dropdown">
-            <button id="dropdownButton" class="dropdown-button bg-green-500 text-white px-4 py-2 rounded-md mb-4">
-                <?php echo $selectedCategoryName ?: 'All Categories'; ?> 
-                <iconify-icon icon="ion:chevron-down"></iconify-icon>
-            </button>
-            <div class="dropdown-content">
-                <button onclick="filterByCategory('all', 'All Categories')">All Categories</button>
-                <?php while ($category = $categoriesResult->fetch_assoc()): ?>
-                    <div class="flex items-center justify-between">
-                        <button onclick="filterByCategory(<?php echo htmlspecialchars($category['id']); ?>, '<?php echo htmlspecialchars($category['name']); ?>')">
-                            <?php echo htmlspecialchars($category['name']); ?>
+    <div class="container mx-auto p-5  px-0">
+        <div class="heading_dashboard sticky top-0 py-3 pt-4 bg-gray-100">
+            <div class="flex justify-between">
+                <h1 class="text-2xl font-bold mb-4">Dashboard</h1>
+                <p>Hallo, <?php echo $username; ?></p>
+            </div>
+            <div class="flex justify-between">
+                <div class="flex gap-2">
+                    <a href="index.php" target="blank_"><button class="bg-green-400 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Mulai Undian <iconify-icon icon="mdi:rocket"></iconify-icon></button></a>
+                    <button onclick="openAddPopup()" class="bg-blue-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Add Participant <iconify-icon icon="octicon:plus-16"></iconify-icon></button>
+                    <button onclick="openAddFilePopup()" class="bg-blue-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Upload XLSX <iconify-icon icon="octicon:plus-16"></iconify-icon></button>
+                    <a href="winner-participants.php"><button class="bg-yellow-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Lihat Pemenang <iconify-icon icon="ion:trophy"></iconify-icon></button></a>
+                </div>
+                <div class="flex gap-2">
+                    <div class="dropdown">
+                        <button id="dropdownButton" class="dropdown-button bg-green-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">
+                            <?php echo $selectedCategoryName ?: 'All Categories'; ?> 
+                            <iconify-icon icon="ion:chevron-down"></iconify-icon>
                         </button>
-                        <iconify-icon icon="ion:close" onclick="deleteCategory(<?php echo htmlspecialchars($category['id']); ?>)" class="cursor-pointer text-red-500"></iconify-icon>
+                        <div class="dropdown-content">
+                            <button onclick="filterByCategory('all', 'All Categories')">All Categories</button>
+                            <?php while ($category = $categoriesResult->fetch_assoc()): ?>
+                                <div class="flex items-center justify-start">
+                                    <button onclick="filterByCategory(<?php echo htmlspecialchars($category['id']); ?>, '<?php echo htmlspecialchars($category['name']); ?>')">
+                                        <?php echo htmlspecialchars($category['name']); ?>
+                                    </button>
+                                    <iconify-icon icon="ion:close" onclick="deleteCategory(<?php echo htmlspecialchars($category['id']); ?>)" class="cursor-pointer text-red-500"></iconify-icon>
+                                </div>
+                            <?php endwhile; ?>
+                            <button onclick="openCreateCategoryPopup()">Tambah Kategori</button>
+                        </div>
                     </div>
-                <?php endwhile; ?>
-                <button onclick="openCreateCategoryPopup()">Tambah Kategori <iconify-icon icon="ic:round-plus"></iconify-icon></button>
+                    <button onclick="openCreateCategoryPopup()" class="bg-green-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Buat Kategori <iconify-icon icon="octicon:plus-16"></iconify-icon></button>
+                    <button onclick="confirmDeleteAll()" class="bg-red-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Delete All Participants <iconify-icon icon="ion:trash"></iconify-icon></button>
+                    <!-- Button to trigger logout -->
+                    <form action="logout.php" method="post" style="display: inline;">
+                        <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-md  flex items-center gap-1">Logout <iconify-icon icon="ri:logout-circle-r-fill"></iconify-icon></button>
+                    </form>
+                </div>
             </div>
         </div>
 
         <table class="min-w-full bg-white border border-gray-300 rounded-md">
-            <thead>
+            <thead >
                 <tr>
                     <th class="py-2 px-4 border-b">#</th>
                     <th class="py-2 px-4 border-b">NPK</th>
-                    <th class="py-2 px-4 border-b">Name</th>
-                    <th class="py-2 px-4 border-b">Actions</th>
+                    <th class="py-2 px-4 border-b">Nama Peserta</th>
+                    <th class="py-2 px-4 border-b">Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -163,9 +215,9 @@ $conn->close();
                         <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($counter++); ?></td> <!-- Display the counter value -->
                         <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($row['npk']); ?></td>
                         <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($row['nama']); ?></td>
-                        <td class="py-2 px-4 border-b">
+                        <td class="py-2 px-4 border-b flex justify-center">
                             <button onclick="openEditPopup(<?php echo htmlspecialchars($row['id']); ?>, '<?php echo htmlspecialchars($row['nama']); ?>')" class="text-blue-500">Edit</button>
-                            <a href="manage-users.php?delete=<?php echo htmlspecialchars($row['id']); ?>" class="text-red-500 ml-4" onclick="return confirm('Are you sure you want to delete this user?')">Delete</a>
+                            <a href="dashboard.php?delete=<?php echo htmlspecialchars($row['id']); ?>" class="text-red-500 ml-4" onclick="return confirm('Are you sure you want to delete this user?')">Delete</a>
                         </td>
                     </tr>
                 <?php endwhile; ?>
@@ -173,8 +225,8 @@ $conn->close();
         </table>
         <!-- Button for creating categories -->
         <?php if (!$hasCategories): ?>
-            <div id="createCategoryContainer">
-                <button onclick="openCreateCategoryPopup()" class="bg-green-500 text-white px-4 py-2 rounded-md mt-4">Buat Kategori</button>
+            <div id="createCategoryContainer" class="flex items-center justify-center" style="height:13vw;">
+                <button onclick="openCreateCategoryPopup()" class="bg-green-500 text-white px-4 py-2 rounded-md mt-10 text-center">Buat Kategori Dulu!</button>
             </div>
         <?php endif; ?>
     </div>
@@ -196,8 +248,8 @@ $conn->close();
     <!-- Popup for Create Category -->
     <div id="createCategoryPopup" class="popup">
         <div class="popup-content">
-            <h2>Create Category</h2>
             <form action="create-category.php" method="post">
+                <input type="hidden" name="id_user" value="<?php echo htmlspecialchars($_SESSION['user_id']); ?>">
                 <label for="categoryName">Category Name:</label>
                 <input type="text" name="name" id="categoryName" required class="w-full border border-gray-300 p-2 mb-4" placeholder="Category Name">
                 <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-md">Create</button>
@@ -206,10 +258,12 @@ $conn->close();
         </div>
     </div>
 
+
     <div id="addPopup" class="popup">
         <div class="popup-content">
-            <h2>Add Participant</h2>
             <form action="save-participants.php" method="post">
+                <input type="hidden" name="id_user" value="<?php echo htmlspecialchars($_SESSION['user_id']); ?>" />
+
                 <label for="npk">NPK:</label>
                 <input type="text" name="npks[]" id="npk" required class="w-full border border-gray-300 p-2 mb-2" placeholder="NPK">
                 
@@ -218,11 +272,11 @@ $conn->close();
 
                 <label for="fileCategory">Category:</label>
                 <select name="category_id" id="fileCategory" required class="w-full border border-gray-300 p-2 mb-4">
+                    <option value="" disabled selected>Pilih dulu kategori</option>
                     <?php while ($category = $categoriesResult1->fetch_assoc()): ?>
                         <option value="<?php echo htmlspecialchars($category['id']); ?>"><?php echo htmlspecialchars($category['name']); ?></option>
                     <?php endwhile; ?>
                 </select>
-                
 
                 <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-md mr-2">Save</button>
                 <button type="button" onclick="closeAddPopup()" class="bg-red-500 text-white px-4 py-2 rounded-md">Cancel</button>
@@ -232,24 +286,25 @@ $conn->close();
 
     <div id="addFilePopup" class="popup">
         <div class="popup-content">
-            <h2>Add Participants</h2>
             <form action="upload-participants.php" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="id_user" value="<?php echo htmlspecialchars($_SESSION['user_id']); ?>" />
                 <label for="file">Upload Excel File:</label>
                 <input type="file" name="file" id="file" accept=".xlsx" required class="w-full border border-gray-300 p-2 mb-4">
                 <label for="fileCategory">Category:</label>
                 <select name="category_id" id="fileCategory" required class="w-full border border-gray-300 p-2 mb-4">
+                    <option value="" disabled selected>Pilih dulu kategori</option>
                     <?php
                     while ($category = $categoriesResult2->fetch_assoc()): ?>
                         <option value="<?php echo htmlspecialchars($category['id']); ?>"><?php echo htmlspecialchars($category['name']); ?></option>
                     <?php endwhile; ?>
                 </select>
 
-                
                 <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-md mr-2">Upload</button>
                 <button type="button" onclick="closeAddFilePopup()" class="bg-red-500 text-white px-4 py-2 rounded-md">Cancel</button>
             </form>
         </div>
     </div>
+
 
     <script>
         document.querySelector('.dropdown-button').addEventListener('click', function () {
@@ -272,7 +327,7 @@ $conn->close();
 
         function confirmDeleteAll() {
             if (confirm('Are you sure you want to delete all participants? This action cannot be undone.')) {
-                window.location.href = 'manage-users.php?delete_all=1';
+                window.location.href = 'dashboard.php?delete_all=1';
             }
         }
 
@@ -316,9 +371,9 @@ $conn->close();
 
             // Reload the page with the selected category filter
             if (categoryId === 'all') {
-                window.location.href = 'manage-users.php'; // No filter applied
+                window.location.href = 'dashboard.php'; // No filter applied
             } else {
-                window.location.href = 'manage-users.php?category_id=' + categoryId;
+                window.location.href = 'dashboard.php?category_id=' + categoryId;
             }
         }
 
