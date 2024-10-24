@@ -23,6 +23,11 @@ if (!isset($_SESSION['user_id'])) {
 // Ambil user_id dari session
 $user_id = $_SESSION['user_id'];
 
+// Set jumlah data per halaman
+$limit = 20;
+$page = isset($_GET['page']) ? intval($_GET['page']) : 1;
+$offset = ($page - 1) * $limit;
+
 $category_id = isset($_GET['category_id']) ? intval($_GET['category_id']) : 0;
 
 // Handle delete action
@@ -40,10 +45,22 @@ if (isset($_GET['delete_all'])) {
     exit();
 }
 
+$totalQuery = "SELECT COUNT(*) as total FROM participants WHERE id_user = $user_id";
+if ($category_id) {
+    $totalQuery .= " AND category_id = $category_id";
+}
+$totalResult = $conn->query($totalQuery);
+$totalRow = $totalResult->fetch_assoc();
+$totalParticipants = $totalRow['total'];
+
+// Hitung jumlah halaman
+$totalPages = ceil($totalParticipants / $limit);
+
 $participantsQuery = "SELECT * FROM participants WHERE id_user = $user_id";
 if ($category_id) {
     $participantsQuery .= " AND category_id = $category_id";
 }
+$participantsQuery .= " LIMIT $limit OFFSET $offset";
 $participantsResult = $conn->query($participantsQuery);
 
 // Fetch categories from the database
@@ -77,6 +94,12 @@ if ($result->num_rows > 0) {
     $username = "Tidak ditemukan";
 }
 
+// Check if there are participants to paginate
+$hasParticipants = $totalParticipants > 0;
+
+// Check if pagination controls should be displayed
+$showPagination = $hasParticipants && $totalPages > 1;
+
 $stmt->close();
 
 $conn->close();
@@ -89,6 +112,7 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
+    <link rel="icon" type="image/png" href="images/favicon.png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <style>
@@ -162,7 +186,7 @@ $conn->close();
                 <h1 class="text-2xl font-bold mb-4">Dashboard</h1>
                 <p>Hallo, <?php echo $username; ?></p>
             </div>
-            <div class="flex justify-between">
+            <div class="flex justify-between gap-2">
                 <div class="flex gap-2">
                     <a href="index.php" target="blank_"><button class="bg-green-400 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Mulai Undian <iconify-icon icon="mdi:rocket"></iconify-icon></button></a>
                     <button onclick="openAddPopup()" class="bg-blue-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Tambah Peserta <iconify-icon icon="octicon:plus-16"></iconify-icon></button>
@@ -192,7 +216,7 @@ $conn->close();
                     <button onclick="confirmDeleteAll()" class="bg-red-500 text-white px-4 py-2 rounded-md mb-4 flex items-center gap-1">Hapus semua peserta <iconify-icon icon="ion:trash"></iconify-icon></button>
                     <!-- Button to trigger logout -->
                     <form action="logout.php" method="post" style="display: inline;">
-                        <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-md  flex items-center gap-1">Logout <iconify-icon icon="ri:logout-circle-r-fill"></iconify-icon></button>
+                        <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-md  flex items-center gap-1">Logout Account<iconify-icon icon="ri:logout-circle-r-fill"></iconify-icon></button>
                     </form>
                 </div>
             </div>
@@ -210,21 +234,42 @@ $conn->close();
             </thead>
             <tbody>
                 <?php
-                $counter = 1; // Initialize the counter variable
+                $counter = $offset + 1; // Menambahkan offset agar nomor berurutan dari halaman sebelumnya
                 while ($row = $participantsResult->fetch_assoc()): ?>
                     <tr>
-                        <td class="py-2 px-4 border-b text-center"><?php echo htmlspecialchars($counter++); ?></td> <!-- Display the counter value -->
+                        <td class="py-2 px-4 border-b text-center"><?php echo htmlspecialchars($counter++); ?></td> <!-- Nomor urut -->
                         <td class="py-2 px-4 border-b text-center"><?php echo htmlspecialchars($row['npk']); ?></td>
                         <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($row['nama']); ?></td>
                         <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($row['unit_kerja']); ?></td>
                         <td class="py-2 px-4 border-b flex justify-center">
                             <button onclick="openEditPopup(<?php echo htmlspecialchars($row['id']); ?>, '<?php echo htmlspecialchars($row['nama']); ?>')" class="text-blue-500">Edit</button>
-                            <a href="dashboard.php?delete=<?php echo htmlspecialchars($row['id']); ?>" class="text-red-500 ml-4" onclick="return confirm('Are you sure you want to delete this user?')">Hapus</a>
+                            <a href="dashboard.php?delete=<?php echo htmlspecialchars($row['id']); ?>" class="text-red-500 ml-4" onclick="return confirm('Apakah Anda yakin ingin menghapus peserta ini?')">Hapus</a>
                         </td>
                     </tr>
                 <?php endwhile; ?>
             </tbody>
         </table>
+
+        <?php if ($showPagination): ?>
+            <div class="flex justify-center mt-4">
+                <?php if ($page > 1): ?>
+                    <a href="?page=<?php echo $page - 1; ?>" class="px-4 py-2 border text-gray-600">Sebelumnya</a>
+                <?php endif; ?>
+
+                <select onchange="window.location.href = this.value" class="border py-2 px-4">
+                    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                        <option value="?page=<?php echo $i; ?>" <?php if ($i == $page) echo 'selected'; ?>>
+                            <?php echo $i; ?>
+                        </option>
+                    <?php endfor; ?>
+                </select>
+
+                <?php if ($page < $totalPages): ?>
+                    <a href="?page=<?php echo $page + 1; ?>" class="px-4 py-2 border text-gray-600">Berikutnya</a>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
         <!-- Button for creating categories -->
         <?php if (!$hasCategories): ?>
             <div id="createCategoryContainer" class="flex items-center justify-center" style="height:13vw;">
@@ -285,6 +330,7 @@ $conn->close();
 
                 <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-md mr-2">Save</button>
                 <button type="button" onclick="closeAddPopup()" class="bg-red-500 text-white px-4 py-2 rounded-md">Cancel</button>
+                
             </form>
         </div>
     </div>

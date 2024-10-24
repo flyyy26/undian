@@ -153,17 +153,22 @@ $conn->close();
                 <table>
                     <thead>
                         <tr>
+                            <th class="border border-gray-400 px-4 py-2">#</th>
                             <th class="border border-gray-400 px-4 py-2">NPK</th>
                             <th class="border border-gray-400 px-4 py-2">Nama</th>
                             <th class="border border-gray-400 px-4 py-2">Unit Kerja</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($participantsArray as $participant): ?>
+                        <?php
+                        $counter = 1; 
+                        foreach ($participantsArray as $participant): 
+                        ?>
                         <tr>
+                            <td style="text-align:center;"><?php echo $counter++; ?></td>
                             <td style="text-align:center;"><?php echo $participant['npk']; ?></td>
                             <td ><?php echo $participant['nama']; ?></td>
-                            <td ><?php echo $participant['unit_kerja']; ?></td>
+                            <td style="text-align:center;"><?php echo $participant['unit_kerja']; ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -303,6 +308,8 @@ $conn->close();
 
 
 
+        let counter = 1; // Inisialisasi variabel counter di luar fungsi agar tetap global
+
         function fetchParticipants(categoryId) {
             const xhr = new XMLHttpRequest();
             xhr.open('GET', `fetch_participants.php?category_id=${categoryId}`, true);
@@ -317,9 +324,10 @@ $conn->close();
                     participants.forEach(participant => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
+                            <td style="text-align:center;">${counter++}</td> <!-- Nomor urut -->
                             <td style="text-align:center;">${participant.npk}</td>
                             <td>${participant.nama}</td>
-                            <td>${participant.unit_kerja || 'N/A'}</td>
+                            <td style="text-align:center;">${participant.unit_kerja || 'N/A'}</td>
                         `;
                         participantsTableBody.appendChild(row);
                     });

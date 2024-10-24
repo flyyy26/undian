@@ -68,7 +68,7 @@ if (isset($_GET['delete_all'])) {
 }
 
 // Query to fetch winners
-$winnerQuery = "SELECT w.id, w.npk, w.nama, w.unit_kerja, c.name AS category_name 
+$winnerQuery = "SELECT w.id, w.npk, w.nama, w.unit_kerja, w.doorprize, c.name AS category_name 
                 FROM winner w
                 JOIN categories c ON w.category_id = c.id
                 WHERE w.id_user = $user_id";
@@ -116,6 +116,7 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daftar Pemenang</title>
+    <link rel="icon" type="image/png" href="images/favicon.png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <style>
@@ -221,7 +222,7 @@ $conn->close();
                     <th class="py-2 px-4 border-b">NPK</th>
                     <th class="py-2 px-4 border-b">Nama Pemenang</th>
                     <th class="py-2 px-4 border-b">Unit Kerja</th>
-                    <th class="py-2 px-4 border-b">Kategori</th>
+                    <th class="py-2 px-4 border-b">Hadiah</th>
                     <th class="py-2 px-4 border-b">Actions</th>
                 </tr>
             </thead>
@@ -230,11 +231,17 @@ $conn->close();
                 $counter = 1; // Initialize the counter variable
                 while ($row = $winnerResult->fetch_assoc()): ?>
                     <tr>
-                        <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($counter++); ?></td> <!-- Display the counter value -->
-                        <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($row['npk']); ?></td>
-                        <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($row['nama']); ?></td>
-                        <td class="py-2 px-4 border-b"><?php echo htmlspecialchars($row['unit_kerja']); ?></td>
-                        <td class="py-2 px-4 border-b text-center"><?php echo htmlspecialchars($row['category_name']); ?></td>
+                        <td class="py-2 px-4 border-b text-center"><?php echo htmlspecialchars($counter++); ?></td> <!-- Display the counter value -->
+                        <td class="py-2 px-4 border-b text-center"><?php echo htmlspecialchars($row['npk']); ?></td>
+                        <td class="py-2 px-4 border-b text-center"><?php echo htmlspecialchars($row['nama']); ?></td>
+                        <td class="py-2 px-4 border-b text-center"><?php echo htmlspecialchars($row['unit_kerja']); ?></td>
+                        <td class="py-2 px-4 border-b text-center">
+                            <?php echo htmlspecialchars($row['doorprize']); ?>
+                            <?php if (empty($row['doorprize'])): ?>
+                                <!-- Show button only if the doorprize is empty -->
+                                <button class="text-blue-500 ml-4" onclick="openModal('<?php echo htmlspecialchars($row['id']); ?>')">Tambah Hadiah</button>
+                            <?php endif; ?>
+                        </td>
                         <td class="py-2 px-4 border-b text-center">
                             <a href="winner-participants.php?delete=<?php echo htmlspecialchars($row['id']); ?>" class="text-red-500 ml-4" onclick="return confirm('Are you sure you want to delete this user?')">Delete</a>
                         </td>
@@ -243,12 +250,31 @@ $conn->close();
             </tbody>
         </table>
 
+
         <?php if (!$hasWinner): ?>
             <div id="createCategoryContainer">
                 <a href="index.php" target="blank_"><button class="bg-blue-500 text-white px-4 py-2 rounded-md mt-4">Mulai Undian</button></a>
             </div>
         <?php endif; ?>
     </div>
+
+    <div id="modal" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-lg">
+            <h2 class="text-lg font-bold mb-4">Tambah Hadiah</h2>
+            <form id="addPrizeForm">
+                <input type="hidden" id="winnerId" name="winner_id">
+                <div class="mb-4">
+                    <label for="doorprize" class="block text-sm font-medium text-gray-700">Hadiah</label>
+                    <input type="text" id="doorprize" name="doorprize" class="mt-1 p-2 border rounded w-full" required>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" class="bg-gray-500 text-white px-4 py-2 rounded mr-2" onclick="closeModal()">Batal</button>
+                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
     <script>
         document.querySelector('.dropdown-button').addEventListener('click', function () {
@@ -286,6 +312,38 @@ $conn->close();
                 window.location.href = 'winner-participants.php?category_id=' + categoryId;
             }
         }
+
+        function openModal(winnerId) {
+            document.getElementById('winnerId').value = winnerId;
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        // Fungsi untuk menutup modal
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+
+        document.getElementById('addPrizeForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const winnerId = document.getElementById('winnerId').value;
+            const doorprize = document.getElementById('doorprize').value;
+
+            // Buat permintaan AJAX untuk menyimpan hadiah
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'add_prize.php', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    alert('Hadiah berhasil ditambahkan!');
+                    closeModal();
+                    location.reload(); // Reload halaman untuk menampilkan hadiah yang baru
+                } else {
+                    alert('Terjadi kesalahan saat menambahkan hadiah.');
+                }
+            };
+            xhr.send('winner_id=' + encodeURIComponent(winnerId) + '&doorprize=' + encodeURIComponent(doorprize));
+        });
 
     </script>
 </body>

@@ -36,10 +36,10 @@
     margin-left: -3.6vw;
 }
 .heading_image{
-    width: 24.5vw;
-    margin-left: -4.3vw;
-    margin-top: -1.4vw;
-    margin-bottom: -.5vw;
+    width: 65vw;
+    margin-left: .5vw;
+    margin-top: -1vw;
+    margin-bottom: 0;
 }
 .belum_login{
     width: 64vw;
@@ -322,14 +322,14 @@ canvas{
     position: absolute;
     left: 50%;
     top: 50%;
-    transform: translate(-50%, 300%);
+    transform: translate(-50%, 250%);
     background: linear-gradient(193.36deg, #F45139 -24.42%, #814C65 58.52%, #1A156E 126.38%);
     border-radius: 1.6vw;
     border: .24vw solid #F45139;
     padding: 2.3vw 4vw;
     padding-top: 4vw;
     z-index: 4;
-    padding-right: 14vw;
+    padding-right: 15.7vw;
     transition: .6s all;
     transition-delay: 0s;
 }
@@ -373,6 +373,7 @@ canvas{
 }
 .popup_winner_content span{
     font-size: 1.7vw;
+    line-height: 1;
 }
 .throphy_img{
     position: absolute;
